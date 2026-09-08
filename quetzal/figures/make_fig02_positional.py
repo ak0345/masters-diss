@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+"""
+make_fig02_positional.py -- Figure 2: guide influence decays along the
+construction path.
+
+Coupled sampled-flip rate against sequence position (left axis) with the prior's
+mean top-1 logit margin on the same positions (right axis), pooled over
+configurations. Trajectories are rolled by the frozen prior, so every
+architecture is compared on an identical state distribution.
+
+The first atom is conditioned on nothing and is genuinely contestable; each
+subsequent atom narrows the choice, and the margin growth on the right axis is
+what accounts for the decay on the left.
+
+POOLING. Rates are pooled from the raw per-position counts each report carries
+-- numerators and denominators summed, divided once at the end. Averaging
+per-run rates would weight a run of 400 states the same as one of 40,000, and at
+deep positions, where only a few long molecules survive, that difference is
+large. Positions no trajectory ever reached stay absent rather than counting as
+zero flips.
+
+INPUTS
+  results/flips-guide/flip_report_*.json          (stage 6)
+
+The margin axis needs `mean_gap_by_position`, which older reports predate. If it
+is absent the script plots the flip curve alone and says so; re-run stage 6 to
+record it.
+
+USAGE
+  python figures/make_fig02_positional.py --out out/fig02_positional.pdf
+  python figures/make_fig02_positional.py --max_pos 16 --temp 1.0
+"""
+import argparse
+import numpy as np
+import matplotlib.pyplot as plt
+
+import figstyle as fs
+
+
+def pooled_curves(reports, max_pos, rewards=None, exclude=()):
+    """Pool flip counts and margin sums across runs, position by position."""
+    flips = np.zeros(max_pos)
+    states = np.zeros(max_pos)
+    gapsum = np.zeros(max_pos)
+    gapstates = np.zeros(max_pos)
+    used = 0
+    have_gap = False
+
+    for label, (doc, blk) in reports.items():
+        if rewards and not any(f"-{r}-" in label for r in rewards):
+            continue
+        if any(x in label for x in exclude):
+            continue
+        raw = blk.get("raw") or {}
+        fb = raw.get("flip_by_position")
+        sb = raw.get("state_by_position")
+        if not fb or not sb:
+            continue
+        used += 1
+        n = min(max_pos, len(fb), len(sb))
+        flips[:n] += np.asarray(fb[:n], dtype=float)
+        states[:n] += np.asarray(sb[:n], dtype=float)
+
+        gs = raw.get("gap_sum_by_position")
+        if gs:
+            have_gap = True
+            m = min(max_pos, len(gs), len(sb))
+            gapsum[:m] += np.asarray(gs[:m], dtype=float)
+            gapstates[:m] += np.asarray(sb[:m], dtype=float)
+
+    rate = np.where(states > 0, flips / np.maximum(states, 1), np.nan)
+    gap = (np.where(gapstates > 0, gapsum / np.maximum(gapstates, 1), np.nan)
+           if have_gap else None)
+    return rate, gap, states, used
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--flips_root", default=fs.FLIPS_DIR)
+    ap.add_argument("--temps", default="1.0,0.3",
+                    help="comma-separated flip temperatures to draw, one curve "
+                         "each (default: both recorded temperatures)")
+    ap.add_argument("--max_pos", type=int, default=16)
+    ap.add_argument("--rewards", default=None,
+                    help="comma-separated subset, e.g. osim,peri")
+    ap.add_argument("--exclude", default="",
+                    help="comma-separated substrings of run names to drop")
+    fs.add_arg_common(ap, "out/fig02_positional.pdf")
+    args = ap.parse_args()
+    fs.use_paper_style()
+
+    temps = [t.strip() for t in args.temps.split(",") if t.strip()]
+    rewards = args.rewards.split(",") if args.rewards else None
+    exclude = tuple(x for x in args.exclude.split(",") if x)
+
+    fig, ax = plt.subplots(figsize=(args.width * 0.62, 3.2))
+    # one flip curve per temperature; the colours are the two ends of the guide
+    # palette so the pair reads as a single family
+    colours = [fs.GUIDE_COLOURS["hidden"], fs.GUIDE_COLOURS["tempgain"],
+               fs.GUIDE_COLOURS["base"]]
+
+    gap = None
+    drawn = []
+    for i, temp in enumerate(temps):
+        reports = fs.load_flip_reports(args.flips_root, temp)
+        rate, g, states, used = pooled_curves(reports, args.max_pos, rewards,
+                                              exclude)
+        x = np.arange(len(rate))
+        ax.plot(x, rate, "o-", ms=4, color=colours[i % len(colours)],
+                label=f"T = {temp}", zorder=3)
+        # the margin is a property of the prior at the visited states, not of
+        # the flip temperature, so one curve is drawn from the first pool
+        if gap is None and g is not None:
+            gap = g
+        drawn.append((temp, rate, g, states, used))
+
+    ax.set_xlabel("sequence position (atom decision)")
+    ax.set_ylabel("coupled sampled-flip rate")
+    ax.set_ylim(bottom=0)
+
+    ax2 = None
+    if gap is not None:
+        ax2 = ax.twinx()
+        ax2.plot(np.arange(len(gap)), gap, "s--", ms=3.5, color="0.45", lw=1.1,
+                 label="prior top-1 margin", zorder=2)
+        ax2.set_ylabel("prior mean top-1 logit margin", color="0.45")
+        ax2.tick_params(axis="y", colors="0.45")
+        ax2.grid(False)
+
+    # One legend covering both axes, placed upper-centre: the margin curve
+    # climbs into the upper right, which is where a default legend lands.
+    handles, labs = ax.get_legend_handles_labels()
+    if ax2 is not None:
+        h2, l2 = ax2.get_legend_handles_labels()
+        handles += h2
+        labs += l2
+    ax.legend(handles, labs, frameon=False, fontsize=6.5, loc="upper center")
+
+    if gap is None:
+        print("[fig] no mean_gap_by_position in these reports -- plotting the "
+              "flip curves alone. Re-run stage 6 to record the margin axis:\n"
+              "    bash scripts/06_flip_diagnostics.sh")
+
+    used_all = drawn[0][4] if drawn else 0
+    # No in-figure title: the caption carries the description, and repeating it
+    # here just costs vertical space in the typeset figure.
+    _ = used_all
+
+    for temp, rate, g, states, used in drawn:
+        x = np.arange(len(rate))
+        finite = x[np.isfinite(rate)]
+        if not len(finite):
+            continue
+        p0 = rate[0] if np.isfinite(rate[0]) else np.nan
+        below = next((int(i) for i in finite if rate[i] < 0.10), None)
+        print(f"[fig] T={temp}: pooled over {used} runs | flip rate at "
+              f"position 0 = {p0:.3f} | first position below 0.10 = {below}")
+        for i in range(min(6, len(rate))):
+            gg = f"{g[i]:.1f}" if g is not None and np.isfinite(g[i]) else "n/a"
+            print(f"        pos {i}: flip {rate[i]:.4f}  margin {gg}  "
+                  f"({int(states[i])} states)")
+
+    fs.save(fig, args.out, args.dpi)
+
+
+if __name__ == "__main__":
+    main()
