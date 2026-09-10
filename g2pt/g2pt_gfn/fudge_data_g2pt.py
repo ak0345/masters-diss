@@ -130,10 +130,16 @@ def main():
     H = torch.cat(all_states, dim=0)
     tok = torch.cat(all_tokens, dim=0)
     y = torch.cat([labels[i].expand(all_states[i].shape[0]) for i in range(len(all_states))])
+    # Continuous target for the regression variant (train_fudge_g2pt.py --target r):
+    # each state's realized trajectory's own log-reward, clipped at the invalid floor.
+    # Kept alongside the binary `y` rather than replacing it, so old (classification)
+    # runs stay reproducible from the same file.
+    r_traj = rewards_t.clamp(min=cfg.invalid_logr)
+    r = torch.cat([r_traj[i].expand(all_states[i].shape[0]) for i in range(len(all_states))])
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    torch.save({"h": H, "token": tok, "y": y, "threshold": threshold, "reward": args.reward,
-                "quantile": args.quantile, "n_trajectories": len(all_states),
-                "n_states": int(H.shape[0])}, args.out)
+    torch.save({"h": H, "token": tok, "y": y, "r": r, "threshold": threshold,
+                "reward": args.reward, "quantile": args.quantile,
+                "n_trajectories": len(all_states), "n_states": int(H.shape[0])}, args.out)
     print(f"[fudge_data] wrote {args.out}: {H.shape[0]} labeled atom-decisions from {len(all_states)} trajectories")
 
 

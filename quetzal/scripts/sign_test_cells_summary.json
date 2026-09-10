@@ -1,0 +1,162 @@
+{
+  "fexo": {
+    "cells": [
+      {
+        "favouring_guide": 8,
+        "guide": "base",
+        "n": 8,
+        "objective": "db"
+      },
+      {
+        "favouring_guide": 0,
+        "guide": "base",
+        "n": 8,
+        "objective": "rtb"
+      },
+      {
+        "favouring_guide": 6,
+        "guide": "hidden",
+        "n": 8,
+        "objective": "db"
+      },
+      {
+        "favouring_guide": 6,
+        "guide": "hidden",
+        "n": 8,
+        "objective": "rtb"
+      },
+      {
+        "favouring_guide": 2,
+        "guide": "tempgain",
+        "n": 8,
+        "objective": "db"
+      },
+      {
+        "favouring_guide": 1,
+        "guide": "tempgain",
+        "n": 8,
+        "objective": "rtb"
+      }
+    ],
+    "cells_favouring_guide": 3,
+    "n_cells": 6,
+    "prior": 0.7078291575160334
+  },
+  "nitrogen": {
+    "cells": [
+      {
+        "favouring_guide": 6,
+        "guide": "base",
+        "n": 8,
+        "objective": "db"
+      },
+      {
+        "favouring_guide": 4,
+        "guide": "base",
+        "n": 8,
+        "objective": "rtb"
+      },
+      {
+        "favouring_guide": 8,
+        "guide": "hidden",
+        "n": 8,
+        "objective": "db"
+      },
+      {
+        "favouring_guide": 4,
+        "guide": "hidden",
+        "n": 8,
+        "objective": "rtb"
+      }
+    ],
+    "cells_favouring_guide": 2,
+    "n_cells": 4,
+    "prior": 0.4355617531771094
+  },
+  "osim": {
+    "cells": [
+      {
+        "favouring_guide": 7,
+        "guide": "base",
+        "n": 8,
+        "objective": "db"
+      },
+      {
+        "favouring_guide": 4,
+        "guide": "base",
+        "n": 8,
+        "objective": "rtb"
+      },
+      {
+        "favouring_guide": 8,
+        "guide": "hidden",
+        "n": 8,
+        "objective": "db"
+      },
+      {
+        "favouring_guide": 4,
+        "guide": "hidden",
+        "n": 8,
+        "objective": "rtb"
+      },
+      {
+        "favouring_guide": 0,
+        "guide": "tempgain",
+        "n": 8,
+        "objective": "db"
+      },
+      {
+        "favouring_guide": 2,
+        "guide": "tempgain",
+        "n": 8,
+        "objective": "rtb"
+      }
+    ],
+    "cells_favouring_guide": 2,
+    "n_cells": 6,
+    "prior": 0.7918739797708725
+  },
+  "peri": {
+    "cells": [
+      {
+        "favouring_guide": 8,
+        "guide": "base",
+        "n": 8,
+        "objective": "db"
+      },
+      {
+        "favouring_guide": 8,
+        "guide": "base",
+        "n": 8,
+        "objective": "rtb"
+      },
+      {
+        "favouring_guide": 8,
+        "guide": "hidden",
+        "n": 8,
+        "objective": "db"
+      },
+      {
+        "favouring_guide": 8,
+        "guide": "hidden",
+        "n": 8,
+        "objective": "rtb"
+      },
+      {
+        "favouring_guide": 8,
+        "guide": "tempgain",
+        "n": 8,
+        "objective": "db"
+      },
+      {
+        "favouring_guide": 8,
+        "guide": "tempgain",
+        "n": 8,
+        "objective": "rtb"
+      }
+    ],
+    "cells_favouring_guide": 6,
+    "n_cells": 6,
+    "prior": 0.4465197718929451
+  }
+}

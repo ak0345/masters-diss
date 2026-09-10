@@ -21,10 +21,12 @@ from figstyle_compare import (rel, savefig, require, plt,
                                MODEL_COLOURS, COMMON_REWARDS, REWARD_TITLE)
 from make_cmp01_landscape import quetzal_rows, pilot_rows
 
+# Reads the _v2 (regression-target) dumps -- see make_cmp08_fudge_vs_dbrtb.py's
+# identical note.
 FUDGE_DUMPS = {
-    "Quetzal": (rel("results", "fudge_dumps"), "dump_summary.json"),
-    "MolGPT": (rel("molgpt", "results", "molgpt", "fudge_dumps"), "summary.json"),
-    "G2PT": (rel("g2pt", "results", "g2pt", "fudge_dumps"), "summary.json"),
+    "Quetzal": (rel("results", "fudge_dumps_v2"), "dump_summary.json"),
+    "MolGPT": (rel("molgpt", "results", "molgpt", "fudge_dumps_v2"), "summary.json"),
+    "G2PT": (rel("g2pt", "results", "g2pt", "fudge_dumps_v2"), "summary.json"),
 }
 
 
@@ -86,7 +88,7 @@ def main():
     fig.legend(handles=handles, loc="lower center", ncol=2, bbox_to_anchor=(0.5, -0.06), frameon=False)
     # No suptitle: the caption carries the description.
     fig.tight_layout()
-    savefig(fig, "cmp09_fudge_landscape.png")
+    savefig(fig, "cmp09_fudge_landscape.pdf")
 
 
 if __name__ == "__main__":

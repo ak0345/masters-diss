@@ -227,7 +227,11 @@ def main():
             sources[r.replace(f"sweep-{fam}-", "")] = load_fps(p, args.n, rng, True)
 
     fs.use_paper_style()
-    fig, axes = plt.subplots(1, 4, figsize=(17, 4.0))
+    # 2x2 rather than a single row of 4: at \linewidth, stacked four deep in
+    # Appendix C, a single row this wide shrank every label and legend below
+    # legibility (figure review, 2026-09-09).
+    fig, axes2d = plt.subplots(2, 2, figsize=(9.2, 7.6))
+    axes = [axes2d[0, 0], axes2d[0, 1], axes2d[1, 0], axes2d[1, 1]]
 
     # ---------------- A: nearest neighbour to the prior -------------------
     ax = axes[0]
@@ -240,8 +244,8 @@ def main():
                 label=f"{label} ({d.mean():.3f})")
     ax.set_xlabel("max Tanimoto to any prior molecule")
     ax.set_ylabel("cumulative fraction")
-    ax.set_title("A. Distance to the prior sample", fontsize=9)
-    ax.legend(fontsize=5.5, loc="upper left")
+    ax.set_title("A. Distance to the prior sample", fontsize=10.5)
+    ax.legend(fontsize=7.5, loc="upper left")
 
     # ---------------- B: nearest neighbour to GEOM ------------------------
     ax = axes[1]
@@ -255,8 +259,8 @@ def main():
         ax.plot(d, np.linspace(0, 1, len(d)), lw=1.3,
                 label=f"{label} ({d.mean():.3f})")
     ax.set_xlabel("max Tanimoto to any GEOM molecule")
-    ax.set_title("B. Distance to GEOM-Drugs", fontsize=9)
-    ax.legend(fontsize=5.5, loc="upper left")
+    ax.set_title("B. Distance to GEOM-Drugs", fontsize=10.5)
+    ax.legend(fontsize=7.5, loc="upper left")
 
     # ---------------- C: 2D embedding, qualitative only -------------------
     ax = axes[2]
@@ -276,8 +280,8 @@ def main():
             ax.scatter(z[:, 0], z[:, 1], s=3, lw=0, alpha=0.55, zorder=3,
                        label=name)
     ax.set_xlabel(xl); ax.set_ylabel(yl)
-    ax.set_title("C. Embedding (orientation only)", fontsize=9)
-    ax.legend(fontsize=5.5, markerscale=2, loc="best")
+    ax.set_title("C. Embedding (orientation only)", fontsize=10.5)
+    ax.legend(fontsize=7.5, markerscale=2, loc="best")
 
     # ------------- D: the same embedding, coloured by artifact ------------
     # This is what the islands in panel C are. They are not a region of
@@ -290,8 +294,8 @@ def main():
     ax.scatter(Z[flags, 0], Z[flags, 1], s=3, c="#C44E52", lw=0, alpha=0.7,
                zorder=2, label=f"charge on carbon ({100*flags.mean():.0f}%)")
     ax.set_xlabel(xl); ax.set_ylabel(yl)
-    ax.set_title("D. Bond-perception artifacts", fontsize=9)
-    ax.legend(fontsize=6, markerscale=2.5, loc="best")
+    ax.set_title("D. Bond-perception artifacts", fontsize=10.5)
+    ax.legend(fontsize=7.5, markerscale=2.5, loc="best")
 
     # No suptitle: the caption names the benchmark and the sample size.
     fs.save(fig, args.out)

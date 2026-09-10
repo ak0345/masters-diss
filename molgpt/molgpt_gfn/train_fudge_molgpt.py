@@ -78,6 +78,10 @@ def main():
     ap.add_argument("--max_train_hours", type=float, default=3.0)
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--target", choices=["y", "r"], default="y",
+                     help="'y': original binary top-quartile classifier (BCE, val_acc). "
+                          "'r': regression onto each state's own trajectory log-reward "
+                          "(MSE on a standardised target, val R^2/Pearson r).")
     args = ap.parse_args()
 
     torch.manual_seed(args.seed)
@@ -85,6 +89,17 @@ def main():
     H, tok, y = blob["h"], blob["token"], blob["y"].float()
     print(f"[train_fudge] loaded {H.shape[0]} states, d_model={H.shape[1]}, "
           f"reward={blob['reward']}, success_rate={y.mean().item():.3f}")
+    if args.target == "r":
+        if "r" not in blob:
+            raise SystemExit(f"{args.data} has no continuous 'r' field -- regenerate with "
+                              f"the current fudge_data_molgpt.py")
+        r_raw = blob["r"].float()
+        r_mean, r_std = r_raw.mean().item(), r_raw.std().item()
+        target = (r_raw - r_mean) / r_std
+        print(f"[train_fudge] target=r, raw log-reward mean={r_mean:.3f} std={r_std:.3f} "
+              f"(standardised before training)")
+    else:
+        target = y
 
     cfg = GFNConfig(name=args.name, molgpt_ckpt=args.molgpt_ckpt, objective="rtb",
                      use_hidden_guide=False, guide_hidden=args.guide_hidden,
@@ -99,8 +114,8 @@ def main():
     n_val = int(n * args.val_frac)
     val_idx, train_idx = perm[:n_val], perm[n_val:]
     H_train, tok_train, y_train = (H[train_idx].to(args.device), tok[train_idx].to(args.device),
-                                    y[train_idx].to(args.device))
-    H_val, tok_val, y_val = H[val_idx].to(args.device), tok[val_idx].to(args.device), y[val_idx].to(args.device)
+                                    target[train_idx].to(args.device))
+    H_val, tok_val, y_val = H[val_idx].to(args.device), tok[val_idx].to(args.device), target[val_idx].to(args.device)
 
     def save(val_loss, val_acc, epoch):
         # Fold --strength into the saved weights (scale the zero-init'd last
@@ -127,7 +142,10 @@ def main():
             idx = torch.randint(0, H_train.shape[0], (args.batch_size,), device=args.device)
             logits = disc(H_train[idx])
             chosen_logit = logits.gather(-1, tok_train[idx].unsqueeze(-1)).squeeze(-1)
-            loss = F.binary_cross_entropy_with_logits(chosen_logit, y_train[idx])
+            if args.target == "r":
+                loss = F.mse_loss(chosen_logit, y_train[idx])
+            else:
+                loss = F.binary_cross_entropy_with_logits(chosen_logit, y_train[idx])
             opt.zero_grad()
             loss.backward()
             opt.step()
@@ -139,10 +157,21 @@ def main():
         with torch.no_grad():
             logits = disc(H_val)
             chosen_logit = logits.gather(-1, tok_val.unsqueeze(-1)).squeeze(-1)
-            val_loss = F.binary_cross_entropy_with_logits(chosen_logit, y_val).item()
-            val_acc = ((chosen_logit > 0).float() == y_val).float().mean().item()
-        print(f"[train_fudge] epoch {epoch} train_loss={train_loss:.4f} "
-              f"val_loss={val_loss:.4f} val_acc={val_acc:.4f}")
+            if args.target == "r":
+                val_loss = F.mse_loss(chosen_logit, y_val).item()
+                ss_res = ((chosen_logit - y_val) ** 2).sum()
+                ss_tot = ((y_val - y_val.mean()) ** 2).sum()
+                val_r2 = (1 - ss_res / ss_tot).item()
+                pred_c, targ_c = chosen_logit - chosen_logit.mean(), y_val - y_val.mean()
+                val_pearson = ((pred_c * targ_c).sum() / (pred_c.norm() * targ_c.norm() + 1e-8)).item()
+                val_acc = val_r2  # reuse the save()-gating variable name below
+                print(f"[train_fudge] epoch {epoch} train_loss={train_loss:.4f} "
+                      f"val_loss={val_loss:.4f} val_r2={val_r2:.4f} val_pearson={val_pearson:.4f}")
+            else:
+                val_loss = F.binary_cross_entropy_with_logits(chosen_logit, y_val).item()
+                val_acc = ((chosen_logit > 0).float() == y_val).float().mean().item()
+                print(f"[train_fudge] epoch {epoch} train_loss={train_loss:.4f} "
+                      f"val_loss={val_loss:.4f} val_acc={val_acc:.4f}")
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             save(val_loss, val_acc, epoch)

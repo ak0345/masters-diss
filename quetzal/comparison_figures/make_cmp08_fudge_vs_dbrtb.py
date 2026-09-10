@@ -26,10 +26,14 @@ from figstyle_compare import (rel, flip_reports, t1_block, savefig, require,
                                plt, json, MODEL_COLOURS, FLIPS_DIRS, NAME_RE)
 from make_cmp03_delivered_flip import METRICS, METRIC_TITLE, quetzal_ok
 
+# Reads the _v2 (regression-target) flip reports -- the original
+# classification-target discriminator never cleared a majority-class
+# validation floor (see papers/current/state.md, 2026-09-09), so it is not
+# the FUDGE baseline this dissertation reports.
 FUDGE_FLIPS_DIRS = {
-    "Quetzal": rel("results", "fudge_flips"),
-    "MolGPT": rel("molgpt", "results", "molgpt", "fudge_flips"),
-    "G2PT": rel("g2pt", "results", "g2pt", "fudge_flips"),
+    "Quetzal": rel("results", "fudge_flips_v2"),
+    "MolGPT": rel("molgpt", "results", "molgpt", "fudge_flips_v2"),
+    "G2PT": rel("g2pt", "results", "g2pt", "fudge_flips_v2"),
 }
 
 
@@ -89,7 +93,7 @@ def main():
     fig.legend(handles=handles, loc="lower center", ncol=2, bbox_to_anchor=(0.5, -0.05), frameon=False)
     # No suptitle: the caption carries the description.
     fig.tight_layout()
-    savefig(fig, "cmp08_fudge_vs_dbrtb.png")
+    savefig(fig, "cmp08_fudge_vs_dbrtb.pdf")
 
 
 if __name__ == "__main__":

@@ -171,6 +171,14 @@ def main():
                 "prior_vs_geom": nn_to(prior_fps, geom_fps).mean(),
                 "guided_vs_geom": nn_to(guided_fps, geom_fps).mean(),
             }
+            if model == "Quetzal":
+                # The corrected reading: guided (seed 0) against the INDEPENDENT
+                # prior draw (seed 42) that "null_vs_prior" already uses as its
+                # own reference, rather than against the seed-matched prior
+                # "guided_vs_prior" uses above. Only meaningful for Quetzal,
+                # where prior/null are genuinely seed-paired with guided; the
+                # pilots' "guided_vs_prior" is not seed-matched to begin with.
+                stats[model][r]["guided_vs_null"] = nn_to(guided_fps, null_fps).mean()
             print(f"[cmp06] {model}/{r}: {stats[model][r]}")
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
@@ -187,6 +195,10 @@ def main():
         ax.bar(xi, nulls, width * 0.9, color=MODEL_COLOURS[model], alpha=0.35, zorder=2)
         ax.scatter(xi, guides, color=MODEL_COLOURS[model], marker=MODEL_MARKERS[model],
                    s=50, zorder=3, label=model, edgecolors="k", linewidths=0.5)
+        if model == "Quetzal":
+            indep = [stats[model].get(r, {}).get("guided_vs_null", np.nan) for r in COMMON_REWARDS]
+            ax.scatter(xi, indep, facecolors="none", edgecolors=MODEL_COLOURS[model],
+                      marker=MODEL_MARKERS[model], s=50, zorder=4, linewidths=1.3)
     ax.set_xticks(x)
     ax.set_xticklabels([REWARD_TITLE.get(r, r) for r in COMMON_REWARDS], rotation=15, fontsize=8)
     ax.set_ylabel("mean max-Tanimoto similarity")
@@ -208,10 +220,14 @@ def main():
     handles = [plt.Line2D([0], [0], marker=MODEL_MARKERS[m], color="w", markerfacecolor=MODEL_COLOURS[m],
                           markeredgecolor="k", markersize=8, label=m) for m in models]
     handles.append(plt.Rectangle((0, 0), 1, 1, color="0.5", alpha=0.35, label="null / prior reference"))
-    fig.legend(handles=handles, loc="lower center", ncol=4, bbox_to_anchor=(0.5, -0.05), frameon=False, fontsize=8)
+    handles.append(plt.Line2D([0], [0], marker=MODEL_MARKERS["Quetzal"], color="w",
+                              markerfacecolor="none", markeredgecolor=MODEL_COLOURS["Quetzal"],
+                              markeredgewidth=1.3, markersize=8,
+                              label="Quetzal, independent reference (panel A only)"))
+    fig.legend(handles=handles, loc="lower center", ncol=5, bbox_to_anchor=(0.5, -0.05), frameon=False, fontsize=8)
     # No suptitle: the caption carries the description.
     fig.tight_layout()
-    savefig(fig, "cmp06_nn_similarity.png")
+    savefig(fig, "cmp06_nn_similarity.pdf")
 
 
 if __name__ == "__main__":

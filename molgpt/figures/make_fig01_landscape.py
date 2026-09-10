@@ -14,6 +14,12 @@ deliberately so"), with the two kinds of quantity kept visually distinct
 they're the same statistic.
 
 Reads results/molgpt/_aggregate/master_table.csv (`08_aggregate.sh`'s output).
+
+The y-axis label carries "MolGPT" as a short prefix. Two copies of this figure (this one and
+g2pt/figures/make_fig01_landscape.py's) are stacked in the dissertation's Figure 4.1, and
+without an in-image identifier a reader has to hold the caption's "MolGPT above, G2PT below"
+in mind while reading the panels themselves. This is the shortest identifier that says which
+architecture without adding a suptitle the caption would then duplicate.
 """
 import csv
 import math
@@ -23,6 +29,8 @@ import sys
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from figstyle_pilot import (MASTER_TABLE, GUIDE_COLOURS, REWARD_TITLE, savefig,
                              require, plt, json, PUBLISHED, GEOM_BASELINE_PATH)
+
+ARCH = "MolGPT"
 
 
 def main():
@@ -62,10 +70,10 @@ def main():
             ax.set_xticklabels(labels, rotation=45, ha="right")
         ax.set_title(REWARD_TITLE.get(reward, reward))
         ax.set_xlabel("objective")
-    axes[0].set_ylabel("terminal log-reward (mean, N=5000)")
+    axes[0].set_ylabel(f"{ARCH}\nterminal log-reward (mean, N=5000)")
     axes[0].legend(fontsize=7, loc="best")
     # No suptitle: the caption carries the description.
-    savefig(fig, "fig01_landscape.png")
+    savefig(fig, "fig01_landscape.pdf")
 
 
 if __name__ == "__main__":
