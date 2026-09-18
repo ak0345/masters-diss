@@ -147,31 +147,6 @@ sweep-<reward>-<guide>-<objective>-replay_<on|off>-b<beta>-s<seed>
 
 which is what lets the aggregation scripts recover the sweep axes from directory names alone.
 
-### Two traps worth knowing
-
-**1. `guide_type` merges two populations.** The flip-diagnostic reports label `base` runs as
-`guide_type = TempGainGuide`, because the two classes coincide at `T = 1`. **Group flip reports
-by the guide tag in the run name, never by the `guide_type` field**, or two separately trained
-populations silently merge into one. `results/tables/make_delivery_table.py` is the reference
-implementation.
-
-**2. Guided and prior dumps of the same seed are coupled.** A guided dump and the prior dump
-carrying the same sampling seed are generated from a shared random stream, so 21--67 % of their
-molecules are byte-for-byte identical. That is a real and useful measurement in its own right,
-but it makes any *similarity-to-the-other-sample* statistic meaningless if the guided pool is
-compared against its seed-matched prior while the null is compared against an independent one.
-
-Measured that way, Quetzal's guided pool returns a nearest-neighbour similarity of 0.507--0.569
-against a null of 0.366. Measured against an **independent** prior draw it returns 0.362--0.366,
-i.e. no effect. An earlier reading of `comparison_figures/make_cmp06_nn_similarity.py`
-concluded that Quetzal's guide concentrates its output; that conclusion was withdrawn.
-`results/ablations/chemistry/analyse_chemistry.py` uses an independent reference for both guided
-and null, and is the correct implementation. `make_cmp06_nn_similarity.py` carries a warning
-block explaining the bias it exhibits.
-
-Pairing is not itself a problem, and it is deliberate. It is what makes the flip diagnostics
-work, and for a *difference of scores* it reduces variance the way a paired test does. It only
-contaminates statistics that measure how similar one sample is to the other.
 
 ---
 
